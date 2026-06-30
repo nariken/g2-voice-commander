@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output — embeds API keys, never commit
+dist/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Packaged app — embeds API keys, never commit
+*.ehpk
+
+# OS / editor
+.DS_Store
+*.log

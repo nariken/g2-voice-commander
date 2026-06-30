@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Even G2 ボイスIssue</title>
+  </head>
+  <body>
+    <h1>Even G2 ボイスIssue</h1>
+    <p id="hint">読み込み中…</p>
+
+    <pre id="screen"></pre>
+
+    <div id="sim" class="row">
+      <button id="g-tap">● タップ</button>
+      <button id="g-dtap">●● ダブル</button>
+    </div>
+
+    <div id="sideload">
+      <p class="note">
+        実機に読み込む：このページを<b>LAN IP</b>で開き、下のQRを Even Realities アプリの
+        Developer Center でスキャン（キーは端末内＝公開トンネル/ポータルに上げないこと）
+      </p>
+      <canvas id="qr"></canvas>
+      <p id="qr-url" class="note"></p>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

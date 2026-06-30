@@ -1,0 +1,24 @@
+{
+  "name": "voice-commander",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Even G2 voice/speech trainer — real-time volume, pace, intonation and pitch feedback on the glasses. No external API.",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "pack": "npm run build && evenhub pack app.json ./dist --output eveng2-voice-trainer.ehpk"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "^0.0.10",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "^0.1.13",
+    "@types/qrcode": "^1.5.6",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}
