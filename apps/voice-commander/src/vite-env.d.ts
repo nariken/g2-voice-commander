@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_GEMINI_API_KEY?: string;
   readonly VITE_LINEAR_API_KEY?: string;
+  readonly VITE_LINEAR_TEAM_ID?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

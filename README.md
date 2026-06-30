@@ -11,6 +11,11 @@ and the glasses show you the result. No phone, no screen, no hands.
 A series of small, self-contained Even G2 (Even Hub) plugins built with
 **Even Hub SDK + TypeScript**, each a step toward an ambient *agentic dev cockpit*.
 
+![G2 Voice Commander demo — speak → Issue / PRD / comment on Linear](apps/voice-commander/media/demo.gif)
+
+> Tap → speak → Gemini classifies the intent → it lands as a Linear **Issue**, a **PRD**,
+> or a **comment** on an existing issue. (Green dot-art is the actual G2 monochrome display.)
+
 ## Apps
 
 | App | What it does | Status |

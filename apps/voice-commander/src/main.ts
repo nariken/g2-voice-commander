@@ -5,8 +5,8 @@ import { framesToWavBase64, totalSeconds } from './wav';
 import { audioToCommand } from './gemini';
 import { createIssue, addComment } from './linear';
 
-const TITLE = 'ボイスIssue';
-const TEAM_ID = 'f8bd0662-520b-42d4-9251-669ccab21ff5'; // Linear team "Ken Narita" (KEN)
+const TITLE = 'ボイスコマンダー';
+const TEAM_ID = import.meta.env.VITE_LINEAR_TEAM_ID ?? ''; // your Linear team UUID
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY ?? '';
 const LINEAR_KEY = import.meta.env.VITE_LINEAR_API_KEY ?? '';
 const MAX_SEC = 60;
@@ -73,6 +73,7 @@ async function stopRecording(): Promise<void> {
       result = await addComment(LINEAR_KEY, cmd.issueId, cmd.comment);
       head = `✓ ${result.identifier} にコメント`;
     } else {
+      if (!TEAM_ID) throw new Error('Linearチーム未設定 (.env VITE_LINEAR_TEAM_ID)');
       const title =
         cmd.action === 'prd' && !/^PRD/i.test(cmd.title) ? `PRD: ${cmd.title}` : cmd.title;
       result = await createIssue(LINEAR_KEY, TEAM_ID, title, cmd.description);
