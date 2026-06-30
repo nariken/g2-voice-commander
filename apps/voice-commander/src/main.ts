@@ -19,13 +19,27 @@ let mode: Mode = 'idle';
 let frames: Float32Array[] = [];
 let recStart = 0;
 let recTimer: ReturnType<typeof setInterval> | null = null;
+let level = 0; // smoothed mic level 0..1 (live from onAudio)
+let meterPhase = 0; // animation step for the equalizer
 
 const idleText = () =>
   [TITLE, '', 'タップで録音開始', '', '声で Issue / PRD / コメント'].join('\n');
 
+// Text equalizer driven by the real mic level, with a little per-bar motion.
+const RAMP = ' ▁▂▃▄▅▆▇█';
+function meter(): string {
+  const n = 14;
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    const v = level * (0.5 + 0.5 * Math.abs(Math.sin(meterPhase * 0.6 + i * 0.7)));
+    s += RAMP[Math.min(8, Math.max(0, Math.round(v * 8)))];
+  }
+  return s;
+}
+
 const recText = () => {
   const sec = Math.floor((Date.now() - recStart) / 1000);
-  return ['● 録音中…', '', `${sec}s / ${MAX_SEC}s`, '', 'タップで停止'].join('\n');
+  return ['● 録音中…', '', `${sec}s / ${MAX_SEC}s`, '', meter(), '', 'タップで停止'].join('\n');
 };
 
 async function toIdle(): Promise<void> {
@@ -36,15 +50,18 @@ async function toIdle(): Promise<void> {
 
 async function startRecording(): Promise<void> {
   frames = [];
+  level = 0;
+  meterPhase = 0;
   recStart = Date.now();
   mode = 'recording';
   await glasses.startAudio();
   await glasses.showText(recText());
   recTimer = setInterval(() => {
     if (mode !== 'recording') return;
+    meterPhase++;
     void glasses.updateText(recText());
     if ((Date.now() - recStart) / 1000 >= MAX_SEC) void stopRecording();
-  }, 1000);
+  }, 250);
 }
 
 async function stopRecording(): Promise<void> {
@@ -124,7 +141,12 @@ async function main(): Promise<void> {
   // init() FIRST — it creates the SDK bridge that onAudio/onGesture subscribe to.
   await glasses.init(idleText());
   glasses.onAudio((samples) => {
-    if (mode === 'recording') frames.push(samples);
+    if (mode !== 'recording') return;
+    frames.push(samples);
+    let sum = 0;
+    for (let i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
+    const rms = Math.sqrt(sum / samples.length);
+    level = Math.min(1, Math.max(level * 0.55, rms * 6)); // gain + smooth decay
   });
   glasses.onGesture(handleGesture);
   if (glasses.isReal) {
