@@ -2,13 +2,9 @@ import './styles.css';
 import QRCode from 'qrcode';
 import { createGlasses, SAMPLE_RATE, type Glasses, type Gesture } from './glasses';
 import { framesToWavBase64, totalSeconds } from './wav';
-import { audioToCommand } from './gemini';
-import { createIssue, addComment } from './linear';
+import { audioToCommand, createIssue, addComment } from './api';
 
 const TITLE = 'ボイスコマンダー';
-const TEAM_ID = import.meta.env.VITE_LINEAR_TEAM_ID ?? ''; // your Linear team UUID
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY ?? '';
-const LINEAR_KEY = import.meta.env.VITE_LINEAR_API_KEY ?? '';
 const MAX_SEC = 60;
 
 type Mode = 'idle' | 'recording' | 'processing' | 'done' | 'error';
@@ -60,23 +56,20 @@ async function stopRecording(): Promise<void> {
   mode = 'processing';
   await glasses.showText(['要件化中…', '', '🎙 → 📝 → Linear', '', 'しばらくお待ちを'].join('\n'));
   try {
-    if (!GEMINI_KEY) throw new Error('Geminiキー未設定 (.env VITE_GEMINI_API_KEY)');
-    if (!LINEAR_KEY) throw new Error('Linearキー未設定 (.env VITE_LINEAR_API_KEY)');
     if (totalSeconds(frames, SAMPLE_RATE) < 0.5) throw new Error('録音が短すぎます');
     const wav = framesToWavBase64(frames, SAMPLE_RATE);
-    const cmd = await audioToCommand(wav, GEMINI_KEY);
+    const cmd = await audioToCommand(wav);
 
     let head: string;
     let result;
     if (cmd.action === 'comment') {
       if (!cmd.issueId) throw new Error('対象Issueが不明。「KEN-XXX に〜」と言ってください');
-      result = await addComment(LINEAR_KEY, cmd.issueId, cmd.comment);
+      result = await addComment(cmd.issueId, cmd.comment);
       head = `✓ ${result.identifier} にコメント`;
     } else {
-      if (!TEAM_ID) throw new Error('Linearチーム未設定 (.env VITE_LINEAR_TEAM_ID)');
       const title =
         cmd.action === 'prd' && !/^PRD/i.test(cmd.title) ? `PRD: ${cmd.title}` : cmd.title;
-      result = await createIssue(LINEAR_KEY, TEAM_ID, title, cmd.description);
+      result = await createIssue(title, cmd.description);
       head = cmd.action === 'prd' ? `✓ PRD作成 ${result.identifier}` : `✓ Issue作成 ${result.identifier}`;
     }
     mode = 'done';

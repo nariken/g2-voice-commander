@@ -1,0 +1,6 @@
+# Local secrets for `wrangler dev` (copy to .dev.vars, never commit).
+# In production set these with `wrangler secret put <NAME>`.
+GEMINI_API_KEY=
+LINEAR_API_KEY=
+LINEAR_TEAM_ID=
+APP_TOKEN=

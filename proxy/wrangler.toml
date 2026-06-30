@@ -1,0 +1,6 @@
+name = "g2-voice-commander-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+# Secrets (set with `wrangler secret put <NAME>`, never commit):
+#   GEMINI_API_KEY, LINEAR_API_KEY, LINEAR_TEAM_ID, APP_TOKEN

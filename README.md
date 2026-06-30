@@ -40,29 +40,43 @@ status there, the glasses read it.
 
 ## Run it
 
-Each app is a standalone Vite + TypeScript project. **Bring your own API keys** — they are
-read from `.env` at build time, so this is a **personal sideload** (never publish a build:
-the bundle embeds your keys).
+**Provider keys live in a Cloudflare Worker proxy ([`proxy/`](proxy)), never in the app.** The
+glasses app ships zero secrets and talks to the proxy with a lightweight token — so the
+`.ehpk` is safe to install as a persistent private app.
+
+### 1. Deploy the proxy
+
+```bash
+cd proxy
+npm install
+npx wrangler login
+npx wrangler secret put GEMINI_API_KEY     # https://aistudio.google.com
+npx wrangler secret put LINEAR_API_KEY     # Linear → Settings → Security & access → Personal API keys (write)
+npx wrangler secret put LINEAR_TEAM_ID     # your Linear team UUID
+npx wrangler secret put APP_TOKEN          # any random string; the app sends it as a bearer token
+npx wrangler deploy                        # → https://g2-voice-commander-proxy.<you>.workers.dev
+```
+
+(Local dev: copy `.dev.vars.example` → `.dev.vars`, fill it, `npm run dev`.)
+
+### 2. Point the app at the proxy and run
 
 ```bash
 cd apps/voice-commander
-cp .env.example .env        # then fill in your keys
+cp .env.example .env        # set VITE_PROXY_URL to your Worker URL, VITE_APP_TOKEN to the same token
 npm install
 npm run dev                 # serves on your LAN (host:true)
 ```
 
 Open the dev URL on your **LAN IP** and scan the on-screen QR in the Even Realities app →
-Developer Center. (No public tunnel needed — these apps don't require https/secure-context.
-Keeping it on your LAN keeps your embedded keys off public networks.)
-
-**Keys for `apps/voice-commander`:**
-- `VITE_GEMINI_API_KEY` — [Google AI Studio](https://aistudio.google.com)
-- `VITE_LINEAR_API_KEY` — Linear → Settings → Security & access → Personal API keys (needs write)
+Developer Center. For a persistent install, `npm run build` → `npx evenhub pack app.json ./dist`
+→ install the `.ehpk` — it contains **no secrets**, so this is safe.
 
 ## Safety
 
-- `.env`, `dist/`, and `*.ehpk` are git-ignored — they embed your keys. **Never commit them.**
-- These are personal-use sideload apps. Do **not** upload a keyed build to the public app store.
+- The app ships **no provider keys**. They live only as Cloudflare Worker secrets.
+- `.env`, `.dev.vars`, `dist/`, and `*.ehpk` are git-ignored. **Never commit them.**
+- `VITE_APP_TOKEN` is just a gate on your proxy — rotate it if it leaks; your provider keys stay safe.
 
 ## License
 
