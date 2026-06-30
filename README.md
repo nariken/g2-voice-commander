@@ -11,6 +11,11 @@ and the glasses show you the result. No phone, no screen, no hands.
 A series of small, self-contained Even G2 (Even Hub) plugins built with
 **Even Hub SDK + TypeScript**, each a step toward an ambient *agentic dev cockpit*.
 
+**Open source, single-user by design.** The code here is public, but you run your **own**
+Cloudflare Worker (with your keys) and install your **own** private build — a personal
+commander wired to *your* Linear. Nothing is shared or multi-tenant; everyone who clones this
+gets their own private app.
+
 ![G2 Voice Commander demo — speak → Issue / PRD / comment on Linear](apps/voice-commander/media/demo.gif)
 
 > Tap → speak → Gemini classifies the intent → it lands as a Linear **Issue**, a **PRD**,
@@ -34,9 +39,10 @@ The glasses as the **voice-in / status-out** surface for orchestrating AI agents
 4. **Two-way notifications** — “done”, “review pending”, “CI failed”, “PR created” pushed to the HUD.
 5. **Multi-agent** — ChatGPT (sparring) · Claude Code (build) · Linear (tasks) · GitHub (PRs) · G2 (UI).
 
-Architecture note: stages 1–2 are **client-only** (glasses → SaaS APIs directly). Stage 3+
-adds a small orchestrator and uses **Linear/GitHub as the shared event bus** — agents write
-status there, the glasses read it.
+Architecture note: the glasses talk only to **your own Cloudflare Worker proxy**, which holds
+the keys and calls Gemini/Linear — so the app ships no secrets. Stage 3+ grows that same proxy
+into an orchestrator, using **Linear/GitHub as the shared event bus** — agents write status
+there, the glasses read it.
 
 ## Run it
 
