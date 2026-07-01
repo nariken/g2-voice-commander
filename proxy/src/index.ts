@@ -17,6 +17,9 @@ export interface Env {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   GOOGLE_REFRESH_TOKEN: string;
+  // GitHub (Stage 3): open an @claude issue so Claude Code implements → PR.
+  GITHUB_TOKEN: string;
+  GITHUB_REPO: string; // "owner/repo", e.g. "nariken/g2-voice-commander"
 }
 
 const TIME_ZONE = 'Asia/Tokyo';
@@ -46,14 +49,15 @@ const geminiPrompt = (now: string) => `あなたは優秀なプロダクトマ�
 
 action を次から選ぶ:
 - "calendar": **日時（日付・時刻・「朝/昼/夜/夕方」など）を伴う予定・アポ・やること**は最優先で calendar。例「明日の朝に歯医者」「来週火曜10-11時 定例」「金曜の夜 飲み会」「3日後にレビュー」。title=予定名、eventStart/eventEnd=日時。
-- "comment": 既存 Issue（"KEN-123" のような識別子を含む）への追記・指示（「〜に追記」「KEN-622を実装して」等）。issueId に識別子、comment に本文。
+- "implement": **コードの実装・修正を依頼**するもの（「〜を実装して」「〜を作って」「〜のバグを直して」「〜をリファクタして」等）。Claude Code が GitHub で実装する。title=簡潔なタイトル、description=実装仕様（何を・なぜ・受け入れ条件を箇条書きで）。
+- "comment": 既存 Issue（"KEN-123" のような識別子を含む）への追記メモ・指示（「KEN-622 に〜と追記」等）。issueId に識別子、comment に本文。※コード実装の依頼は implement を優先。
 - "prd": 「PRDを作って」等、要件定義(PRD)を求めている場合。description に「## 概要 / ## 背景 / ## ゴール / ## 非ゴール / ## 要件 / ## 受け入れ条件」を含む詳細版。
 - "issue": 上記以外（日時を伴わない思いつき・要望・バグ・課題メモ）。デフォルト。
 
-判定の要点: **発話に具体的な日時・時間帯があり、それが「その時に何かする/会う」予定なら calendar。** 日時が無い、または「Issueにして」「バグ」「課題」等の明示があれば issue。「PRD」明示なら prd。
+判定の要点: **発話に具体的な日時・時間帯があり、それが「その時に何かする/会う」予定なら calendar。** 「実装して/作って/直して」等コードを書かせる依頼は implement。日時が無い単なるメモは issue。「PRD」明示なら prd。既存KEN-XXXへの追記メモは comment。
 
 出力フィールド:
-- title, description: issue / prd / calendar 用。issue/prd は Markdown（見出しは行頭、セクション間に空行、改行は実際の改行文字）。calendar では title=予定名、description=メモ（無ければ空文字）。**calendar の title は必ず埋める**（発話の用件そのもの。単語だけでも可：「歯医者」「美容院」「定例ミーティング」）。日時語（明日/朝/15時 等）は title に含めない。
+- title, description: issue / prd / calendar / implement 用。issue/prd/implement は Markdown（見出しは行頭、セクション間に空行、改行は実際の改行文字）。calendar では title=予定名、description=メモ（無ければ空文字）。**calendar の title は必ず埋める**（発話の用件そのもの。単語だけでも可：「歯医者」「美容院」「定例ミーティング」）。日時語（明日/朝/15時 等）は title に含めない。
 - issueId, comment: comment 用（他は空文字）。
 - eventStart, eventEnd: calendar 用。ISO 8601＋オフセット（例 2026-07-02T15:00:00+09:00）。現在時刻を基準に相対表現を解決。曖昧な時間帯の既定は 朝=09:00 / 昼=12:00 / 夕方=17:00 / 夜=19:00。終了時刻が不明なら開始+1時間。時刻が全く不明（日付のみ）なら朝=09:00 扱い。他の action では空文字。
 - eventLocation: calendar の場所（任意、無ければ空文字）。
@@ -63,7 +67,7 @@ action を次から選ぶ:
 const GEMINI_SCHEMA = {
   type: 'OBJECT',
   properties: {
-    action: { type: 'STRING', enum: ['issue', 'prd', 'comment', 'calendar'] },
+    action: { type: 'STRING', enum: ['issue', 'prd', 'comment', 'calendar', 'implement'] },
     title: { type: 'STRING' },
     description: { type: 'STRING' },
     issueId: { type: 'STRING' },
@@ -153,6 +157,25 @@ async function createEvent(
   return { summary: d.summary as string, start: d.start?.dateTime as string, url: d.htmlLink as string };
 }
 
+// Stage 3: open a GitHub issue that @claude-mentions the Claude Code Action, so
+// it implements the request on a new branch and opens a PR.
+async function githubIssue(env: Env, title: string, spec: string) {
+  if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) throw new Error('GitHub未設定 (GITHUB_TOKEN/GITHUB_REPO)');
+  const res = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/issues`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${env.GITHUB_TOKEN}`,
+      accept: 'application/vnd.github+json',
+      'content-type': 'application/json',
+      'user-agent': 'g2-voice-commander',
+    },
+    body: JSON.stringify({ title, body: `@claude ${spec}` }),
+  });
+  if (!res.ok) throw new Error(`GitHub ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const d: any = await res.json();
+  return { number: d.number as number, url: d.html_url as string, title: d.title as string };
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
@@ -179,6 +202,10 @@ export default {
         const c = await linear(env, COMMENT, { input: { issueId: f.issue.id, body: body.body } });
         if (!c.commentCreate?.success) throw new Error('Linear: コメント作成に失敗');
         return json({ identifier: f.issue.identifier, url: f.issue.url, title: f.issue.title });
+      }
+      if (path === '/implement') {
+        if (!body.title || !body.description) throw new Error('タイトルと実装内容が必要です');
+        return json(await githubIssue(env, body.title, body.description));
       }
       if (path === '/calendar') {
         if (!body.summary || !body.start || !body.end) throw new Error('予定名・開始・終了が必要です');

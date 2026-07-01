@@ -8,3 +8,6 @@ APP_TOKEN=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REFRESH_TOKEN=
+# GitHub (optional — the "実装" action / Stage 3). Fine-grained PAT with Issues:write.
+GITHUB_TOKEN=
+GITHUB_REPO=nariken/g2-voice-commander

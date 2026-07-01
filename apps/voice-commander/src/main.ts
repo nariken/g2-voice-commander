@@ -2,7 +2,7 @@ import './styles.css';
 import QRCode from 'qrcode';
 import { createGlasses, SAMPLE_RATE, type Glasses, type Gesture } from './glasses';
 import { framesToWavBase64, totalSeconds } from './wav';
-import { audioToCommand, createIssue, addComment, createEvent } from './api';
+import { audioToCommand, createIssue, addComment, createEvent, requestImplementation } from './api';
 
 const TITLE = 'ボイスコマンダー';
 const MAX_SEC = 60;
@@ -23,7 +23,7 @@ let level = 0; // smoothed mic level 0..1 (live from onAudio)
 let meterPhase = 0; // animation step for the equalizer
 
 const idleText = () =>
-  [TITLE, '', 'タップで録音開始', '', '声で Issue / PRD / コメント / 予定'].join('\n');
+  [TITLE, '', 'タップで録音開始', '', '声で Issue / PRD / コメント / 予定 / 実装'].join('\n');
 
 // "2026-07-02T15:00:00+09:00" -> "7/2(水) 15:00" for the glasses confirmation.
 function formatWhen(iso: string): string {
@@ -99,6 +99,11 @@ async function stopRecording(): Promise<void> {
       const r = await addComment(cmd.issueId, cmd.comment);
       head = `✓ ${r.identifier} にコメント`;
       body = r.title;
+      url = r.url;
+    } else if (cmd.action === 'implement') {
+      const r = await requestImplementation(cmd.title, cmd.description);
+      head = `✓ #${r.number} 実装依頼`;
+      body = `${r.title}\nClaude Code 起動中…`;
       url = r.url;
     } else if (cmd.action === 'calendar') {
       if (!cmd.eventStart || !cmd.eventEnd) throw new Error('予定の日時が聞き取れませんでした');

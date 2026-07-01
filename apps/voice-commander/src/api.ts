@@ -3,7 +3,7 @@
 const PROXY = import.meta.env.VITE_PROXY_URL ?? '';
 const TOKEN = import.meta.env.VITE_APP_TOKEN ?? '';
 
-export type Action = 'issue' | 'prd' | 'comment' | 'calendar';
+export type Action = 'issue' | 'prd' | 'comment' | 'calendar' | 'implement';
 
 export interface Command {
   action: Action;
@@ -28,6 +28,12 @@ export interface CreatedEvent {
   url: string;
 }
 
+export interface CreatedGithubIssue {
+  number: number;
+  url: string;
+  title: string;
+}
+
 async function call<T>(path: string, body: unknown): Promise<T> {
   if (!PROXY) throw new Error('プロキシ未設定 (.env VITE_PROXY_URL)');
   const res = await fetch(`${PROXY}${path}`, {
@@ -50,6 +56,10 @@ export const createIssue = (title: string, description: string) =>
 /** Add a comment to an existing issue by identifier (e.g. "KEN-622"). */
 export const addComment = (identifier: string, body: string) =>
   call<CreatedIssue>('/comment', { identifier, body });
+
+/** Open an @claude GitHub issue → Claude Code implements it → PR (repo is configured in the proxy). */
+export const requestImplementation = (title: string, description: string) =>
+  call<CreatedGithubIssue>('/implement', { title, description });
 
 /** Create a Google Calendar event (calendar is configured in the proxy). */
 export const createEvent = (
