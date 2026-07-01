@@ -25,7 +25,7 @@ gets their own private app.
 
 | App | What it does | Status |
 | --- | --- | --- |
-| [`apps/voice-commander`](apps/voice-commander) | Tap → speak → Gemini turns it into a Linear **Issue / PRD / comment** → glasses show `✓ KEN-123` | ✅ device-verified MVP |
+| [`apps/voice-commander`](apps/voice-commander) | Tap → speak → Gemini turns it into a Linear **Issue / PRD / comment**, or a **Google Calendar event** → glasses show the result | ✅ device-verified MVP |
 
 _(more in the series to come)_
 
@@ -61,6 +61,18 @@ npx wrangler secret put LINEAR_API_KEY     # Linear → Settings → Security & 
 npx wrangler secret put LINEAR_TEAM_ID     # your Linear team UUID
 npx wrangler secret put APP_TOKEN          # any random string; the app sends it as a bearer token
 npx wrangler deploy                        # → https://g2-voice-commander-proxy.<you>.workers.dev
+```
+
+**Optional — the「予定」(calendar) action.** To let "明日15時に歯医者" create a Google Calendar
+event, get a personal refresh token once and add three more secrets:
+
+```bash
+# In Google Cloud Console: enable the Calendar API, create a "Web application" OAuth client
+# with redirect URI http://localhost:4747/callback, and add yourself as a Test user.
+node scripts/google-oauth.mjs             # opens consent → prints your refresh_token
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put GOOGLE_REFRESH_TOKEN
 ```
 
 (Local dev: copy `.dev.vars.example` → `.dev.vars`, fill it, `npm run dev`.)

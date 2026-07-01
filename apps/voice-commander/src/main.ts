@@ -2,7 +2,7 @@ import './styles.css';
 import QRCode from 'qrcode';
 import { createGlasses, SAMPLE_RATE, type Glasses, type Gesture } from './glasses';
 import { framesToWavBase64, totalSeconds } from './wav';
-import { audioToCommand, createIssue, addComment } from './api';
+import { audioToCommand, createIssue, addComment, createEvent } from './api';
 
 const TITLE = 'ボイスコマンダー';
 const MAX_SEC = 60;
@@ -23,7 +23,21 @@ let level = 0; // smoothed mic level 0..1 (live from onAudio)
 let meterPhase = 0; // animation step for the equalizer
 
 const idleText = () =>
-  [TITLE, '', 'タップで録音開始', '', '声で Issue / PRD / コメント'].join('\n');
+  [TITLE, '', 'タップで録音開始', '', '声で Issue / PRD / コメント / 予定'].join('\n');
+
+// "2026-07-02T15:00:00+09:00" -> "7/2(水) 15:00" for the glasses confirmation.
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
 
 // Text equalizer driven by the real mic level, with a little per-bar motion.
 const RAMP = ' ▁▂▃▄▅▆▇█';
@@ -71,27 +85,44 @@ async function stopRecording(): Promise<void> {
   }
   await glasses.stopAudio();
   mode = 'processing';
-  await glasses.showText(['要件化中…', '', '🎙 → 📝 → Linear', '', 'しばらくお待ちを'].join('\n'));
+  await glasses.showText(['解析中…', '', '🎙 → 📝 → ✓', '', 'しばらくお待ちを'].join('\n'));
   try {
     if (totalSeconds(frames, SAMPLE_RATE) < 0.5) throw new Error('録音が短すぎます');
     const wav = framesToWavBase64(frames, SAMPLE_RATE);
     const cmd = await audioToCommand(wav);
 
     let head: string;
-    let result;
+    let body: string;
+    let url: string;
     if (cmd.action === 'comment') {
       if (!cmd.issueId) throw new Error('対象Issueが不明。「KEN-XXX に〜」と言ってください');
-      result = await addComment(cmd.issueId, cmd.comment);
-      head = `✓ ${result.identifier} にコメント`;
+      const r = await addComment(cmd.issueId, cmd.comment);
+      head = `✓ ${r.identifier} にコメント`;
+      body = r.title;
+      url = r.url;
+    } else if (cmd.action === 'calendar') {
+      if (!cmd.eventStart || !cmd.eventEnd) throw new Error('予定の日時が聞き取れませんでした');
+      const r = await createEvent(
+        cmd.title || '予定',
+        cmd.eventStart,
+        cmd.eventEnd,
+        cmd.description,
+        cmd.eventLocation,
+      );
+      head = `✓ 予定を登録`;
+      body = `${r.summary}\n${formatWhen(cmd.eventStart)}`;
+      url = r.url;
     } else {
       const title =
         cmd.action === 'prd' && !/^PRD/i.test(cmd.title) ? `PRD: ${cmd.title}` : cmd.title;
-      result = await createIssue(title, cmd.description);
-      head = cmd.action === 'prd' ? `✓ PRD作成 ${result.identifier}` : `✓ Issue作成 ${result.identifier}`;
+      const r = await createIssue(title, cmd.description);
+      head = cmd.action === 'prd' ? `✓ PRD作成 ${r.identifier}` : `✓ Issue作成 ${r.identifier}`;
+      body = r.title;
+      url = r.url;
     }
     mode = 'done';
-    await glasses.showText([head, '', result.title, '', 'タップで戻る'].join('\n'));
-    hintEl.textContent = result.url;
+    await glasses.showText([head, '', body, '', 'タップで戻る'].join('\n'));
+    hintEl.textContent = url;
   } catch (e) {
     mode = 'error';
     await glasses.showText(

@@ -4,3 +4,7 @@ GEMINI_API_KEY=
 LINEAR_API_KEY=
 LINEAR_TEAM_ID=
 APP_TOKEN=
+# Google Calendar (optional — the "予定" action). Get these via scripts/google-oauth.mjs.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=

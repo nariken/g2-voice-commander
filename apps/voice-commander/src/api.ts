@@ -3,7 +3,7 @@
 const PROXY = import.meta.env.VITE_PROXY_URL ?? '';
 const TOKEN = import.meta.env.VITE_APP_TOKEN ?? '';
 
-export type Action = 'issue' | 'prd' | 'comment';
+export type Action = 'issue' | 'prd' | 'comment' | 'calendar';
 
 export interface Command {
   action: Action;
@@ -11,12 +11,21 @@ export interface Command {
   description: string;
   issueId: string;
   comment: string;
+  eventStart: string;
+  eventEnd: string;
+  eventLocation: string;
 }
 
 export interface CreatedIssue {
   identifier: string;
   url: string;
   title: string;
+}
+
+export interface CreatedEvent {
+  summary: string;
+  start: string;
+  url: string;
 }
 
 async function call<T>(path: string, body: unknown): Promise<T> {
@@ -41,3 +50,12 @@ export const createIssue = (title: string, description: string) =>
 /** Add a comment to an existing issue by identifier (e.g. "KEN-622"). */
 export const addComment = (identifier: string, body: string) =>
   call<CreatedIssue>('/comment', { identifier, body });
+
+/** Create a Google Calendar event (calendar is configured in the proxy). */
+export const createEvent = (
+  summary: string,
+  start: string,
+  end: string,
+  description: string,
+  location: string,
+) => call<CreatedEvent>('/calendar', { summary, start, end, description, location });

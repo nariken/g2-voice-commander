@@ -1,8 +1,8 @@
 {
-  "package_id": "com.kennarita.eveng2.voicecommander",
+  "package_id": "com.kennarita.eveng2.voicecmd",
   "edition": "202601",
   "name": "ボイスコマンダー",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.10",
   "entrypoint": "index.html",
